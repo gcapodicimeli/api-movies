@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/gcapodicimeli/api-movies/internal/movie"
 	"github.com/gin-gonic/gin"
 )
 

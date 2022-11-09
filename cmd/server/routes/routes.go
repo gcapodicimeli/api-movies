@@ -3,6 +3,8 @@ package routes
 import (
 	"database/sql"
 
+	"github.com/gcapodicimeli/api-movies/cmd/server/handler"
+	"github.com/gcapodicimeli/api-movies/internal/movie"
 	"github.com/gin-gonic/gin"
 )
 
