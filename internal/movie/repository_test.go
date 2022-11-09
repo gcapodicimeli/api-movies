@@ -21,8 +21,8 @@ var movie_test = domain.Movie{
 	Rating:       4,
 	Awards:       2,
 	Release_date: time.Layout,
-	Length:       0,
-	Genre_id:     0,
+	Length:       null_int,
+	Genre_id:     null_int,
 }
 
 func TestGetOneWithContext(t *testing.T) {
@@ -63,6 +63,7 @@ func TestExist_OK(t *testing.T) {
 	result := repo.Exists(context.TODO(), movie_test.ID)
 
 	assert.True(t, result)
+	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
 func TestGetAll_OK(t *testing.T) {
@@ -72,7 +73,7 @@ func TestGetAll_OK(t *testing.T) {
 
 	column := []string{"id", "title", "rating", "awards", "length", "genre_id"}
 	rows := sqlmock.NewRows(column)
-	movies := []domain.Movie{{ID: 1, Title: "Avatar", Rating: 22, Awards: 99, Length: 0, Genre_id: 1}, {ID: 2, Title: "Simpson", Rating: 33, Awards: 11, Length: 2, Genre_id: 2}}
+	movies := []domain.Movie{{ID: 1, Title: "Avatar", Rating: 22, Awards: 99, Length: nil, Genre_id: nil}, {ID: 2, Title: "Simpson", Rating: 33, Awards: 11, Length: nil, Genre_id: nil}}
 
 	for _, m := range movies {
 		rows.AddRow(m.ID, m.Title, m.Rating, m.Awards, m.Length, m.Genre_id)
@@ -85,4 +86,54 @@ func TestGetAll_OK(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, movies, result)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetById_OK(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	column := []string{"id", "title", "rating", "awards", "length", "genre_id"}
+	rows := sqlmock.NewRows(column)
+	movie := domain.Movie{ID: 1, Title: "Avatar", Rating: 22, Awards: 99, Length: nil, Genre_id: nil}
+
+	rows.AddRow(movie.ID, movie.Title, movie.Rating, movie.Awards, movie.Length, movie.Genre_id)
+
+	mock.ExpectQuery(regexp.QuoteMeta(GET_MOVIE)).WillReturnRows(rows)
+
+	repo := NewRepository(db)
+	result, err := repo.GetMovieByID(context.TODO(), movie_test.ID)
+
+	assert.NoError(t, err)
+	assert.Equal(t, movie, result)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestStore_OK(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	mock.ExpectPrepare(regexp.QuoteMeta(SAVE_MOVIE))
+	mock.ExpectExec(regexp.QuoteMeta(SAVE_MOVIE)).WillReturnResult(sqlmock.NewResult(1, 1))
+
+	columns := []string{"id", "title", "rating", "awards", "length", "genre_id"}
+	rows := sqlmock.NewRows(columns)
+	rows.AddRow(movie_test.ID, movie_test.Title, movie_test.Rating, movie_test.Awards, movie_test.Length, movie_test.Genre_id)
+	// mock.ExpectQuery(regexp.QuoteMeta(GET_MOVIE)).WithArgs(1).WillReturnRows(rows)
+
+	repository := NewRepository(db)
+	ctx := context.TODO()
+
+	newID, err := repository.Save(ctx, movie_test)
+	assert.NoError(t, err)
+
+	// movieResult, err := repository.GetMovieByID(ctx, int(newID))
+	assert.NoError(t, err)
+
+	// assert.NotNil(t, movieResult)
+	// assert.Equal(t, movie_test.ID, movieResult.ID)
+	assert.Equal(t, int64(movie_test.ID), newID)
+	assert.NoError(t, mock.ExpectationsWereMet())
 }
