@@ -137,3 +137,39 @@ func TestStore_OK(t *testing.T) {
 	assert.Equal(t, int64(movie_test.ID), newID)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
+
+func TestDelete_OK(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	mock.ExpectPrepare(regexp.QuoteMeta(DELETE_MOVIE))
+	mock.ExpectExec(regexp.QuoteMeta(DELETE_MOVIE)).WithArgs(movie_test.ID).WillReturnResult(sqlmock.NewResult(1, 1))
+
+	repository := NewRepository(db)
+	result := repository.Delete(context.TODO(), int64(movie_test.ID))
+
+	assert.NoError(t, result)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestUpdate_OK(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	movie := domain.Movie{ID: 1, Title: "Avatar", Rating: 22, Awards: 99, Length: nil, Genre_id: nil}
+
+	mock.ExpectPrepare(regexp.QuoteMeta(UPDATE_MOVIE))
+	mock.ExpectExec(regexp.QuoteMeta(UPDATE_MOVIE)).WithArgs(movie.Title, movie.Rating, movie.Awards, movie.Length, movie.Genre_id, movie.ID).WillReturnResult(sqlmock.NewResult(1, 1))
+
+	columns := []string{"id", "title", "rating", "awards", "length", "genre_id"}
+	rows := sqlmock.NewRows(columns)
+	rows.AddRow(movie.ID, movie.Title, movie.Rating, movie.Awards, movie.Length, movie.Genre_id)
+
+	repository := NewRepository(db)
+	result := repository.Update(context.TODO(), movie, movie.ID)
+
+	assert.NoError(t, result)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
