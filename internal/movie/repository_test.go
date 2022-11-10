@@ -2,6 +2,7 @@ package movie
 
 import (
 	"context"
+	"errors"
 	"regexp"
 	"testing"
 	"time"
@@ -11,7 +12,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var null_int *int
+var (
+	null_int     *int
+	ERRORFORZADO = errors.New("Error forzado")
+)
 
 var movie_test = domain.Movie{
 	ID:           1,
@@ -86,6 +90,30 @@ func TestGetAll_OK(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, movies, result)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetAll_Fail(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	column := []string{"id", "title", "rating", "awards", "length", "genre_id"}
+	rows := sqlmock.NewRows(column)
+	movies := []domain.Movie{{ID: 1, Title: "Avatar", Rating: 22, Awards: 99, Length: nil, Genre_id: nil}, {ID: 2, Title: "Simpson", Rating: 33, Awards: 11, Length: nil, Genre_id: nil}}
+
+	for _, m := range movies {
+		rows.AddRow(m.ID, m.Title, m.Rating, m.Awards, m.Length, m.Genre_id)
+	}
+
+	mock.ExpectQuery(regexp.QuoteMeta(GET_ALL_MOVIES)).WillReturnError(ERRORFORZADO) // * Acá es la diferencia para que falle
+
+	repo := NewRepository(db)
+
+	result, err := repo.GetAll(context.TODO())
+
+	assert.EqualError(t, err, ERRORFORZADO.Error())
+	assert.Empty(t, result)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
